@@ -1,6 +1,6 @@
 const CACHE_NAME = "vo2max-pwa-v1";
 const ASSETS = [
-  "/", // index.html
+  "/",
   "/static/manifest.json",
   "/static/icon-192.png",
   "/static/icon-512.png"
@@ -9,14 +9,6 @@ const ASSETS = [
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
-  );
-});
-
-self.addEventListener("activate", (event) => {
-  event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(keys.map((k) => (k !== CACHE_NAME ? caches.delete(k) : null)))
-    )
   );
 });
 
