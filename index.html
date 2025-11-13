@@ -38,7 +38,7 @@
   </div>
 
   <!-- Garmin FIT SDK and JSZip -->
-  <script src="https://cdn.jsdelivr.net/npm/@garmin-fit/sdk@3.0.0/dist/bundle/FitSDK.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/fit-file-parser@1.8.0/dist/fit-parser.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 
   <script>
@@ -63,8 +63,8 @@
     }
 
     async function parseFit(arrayBuffer) {
-      const decoder = new FitSDK.FitDecoder();
-      const result = decoder.decode(arrayBuffer);
+      const parser = new FitParser({ force: true });
+      const result = parser.decode(arrayBuffer);
       return result;
     }
 
@@ -119,4 +119,5 @@
   </script>
 </body>
 </html>
+
 
