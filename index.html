@@ -37,7 +37,7 @@
     </table>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/fit-file-parser@1.8.0/dist/fit-parser.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/fit-file-parser@1.8.0/dist/fit-file-parser.browser.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
   <script>
     const fileInput = document.getElementById("fitfile");
@@ -62,7 +62,7 @@
 
     async function parseFit(arrayBuffer) {
       return new Promise((resolve, reject) => {
-        const parser = new FitParser.FitParser({ force: true });
+      const parser = new FitParser({ force: true });
         parser.parse(arrayBuffer, (err, data) => {
           if (err) return reject(err);
           resolve(data);
@@ -117,5 +117,6 @@
   </script>
 </body>
 </html>
+
 
 
