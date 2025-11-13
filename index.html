@@ -37,7 +37,7 @@
     </table>
   </div>
 
-  <!-- Garmin FIT SDK and JSZip -->
+  <!-- Reliable browser-compatible FIT parser and ZIP support -->
   <script src="https://cdn.jsdelivr.net/npm/fit-file-parser@1.8.0/dist/fit-parser.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 
@@ -63,9 +63,13 @@
     }
 
     async function parseFit(arrayBuffer) {
-      const parser = new FitParser({ force: true });
-      const result = parser.decode(arrayBuffer);
-      return result;
+      return new Promise((resolve, reject) => {
+        const parser = new FitParser({ force: true });
+        parser.parse(arrayBuffer, (err, data) => {
+          if (err) return reject(err);
+          resolve(data);
+        });
+      });
     }
 
     document.getElementById("processBtn").addEventListener("click", async () => {
@@ -88,19 +92,15 @@
         let vo2 = null;
 
         for (const msg of data.messages || []) {
-          if (msg.name === "unknown_140" && msg.fields) {
-            const field = msg.fields.find(f => f.name === "unknown_7");
-            if (field && field.value != null) {
-              vo2 = scaleVo2(field.value);
-            }
+          if (msg.name === "unknown_140" && msg["unknown_7"] != null) {
+            vo2 = scaleVo2(msg["unknown_7"]);
           }
 
-          if (msg.fields) {
-            for (const field of msg.fields) {
-              const row = document.createElement("tr");
-              row.innerHTML = `<td>${msg.name}</td><td>${field.name}</td><td>${field.name}</td><td>${field.value}</td>`;
-              diagTable.appendChild(row);
-            }
+          for (const key in msg) {
+            if (key === "name") continue;
+            const row = document.createElement("tr");
+            row.innerHTML = `<td>${msg.name}</td><td>${key.startsWith("unknown_") ? key : ""}</td><td>${key}</td><td>${msg[key]}</td>`;
+            diagTable.appendChild(row);
           }
         }
 
@@ -119,5 +119,3 @@
   </script>
 </body>
 </html>
-
-
