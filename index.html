@@ -37,8 +37,10 @@
     </table>
   </div>
 
+  <!-- Garmin FIT SDK and JSZip -->
   <script src="https://cdn.jsdelivr.net/npm/@garmin-fit/sdk@3.0.0/dist/FitSDK.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+
   <script>
     const fileInput = document.getElementById("fitfile");
     const resultEl = document.getElementById("result");
@@ -61,13 +63,9 @@
     }
 
     async function parseFit(arrayBuffer) {
-      return new Promise((resolve, reject) => {
-      const parser = new FitParser.FitParser({ force: true });
-        parser.parse(arrayBuffer, (err, data) => {
-          if (err) return reject(err);
-          resolve(data);
-        });
-      });
+      const decoder = new FitSDK.FitDecoder();
+      const result = decoder.decode(arrayBuffer);
+      return result;
     }
 
     document.getElementById("processBtn").addEventListener("click", async () => {
@@ -89,16 +87,20 @@
         const data = await parseFit(arrayBuffer);
         let vo2 = null;
 
-        for (const msg of data.messages) {
-          if (msg.name === "unknown_140" && msg["unknown_7"] != null) {
-            vo2 = scaleVo2(msg["unknown_7"]);
+        for (const msg of data.messages || []) {
+          if (msg.name === "unknown_140" && msg.fields) {
+            const field = msg.fields.find(f => f.name === "unknown_7");
+            if (field && field.value != null) {
+              vo2 = scaleVo2(field.value);
+            }
           }
 
-          for (const key in msg) {
-            if (key === "name") continue;
-            const row = document.createElement("tr");
-            row.innerHTML = `<td>${msg.name}</td><td>${key.startsWith("unknown_") ? key : ""}</td><td>${key}</td><td>${msg[key]}</td>`;
-            diagTable.appendChild(row);
+          if (msg.fields) {
+            for (const field of msg.fields) {
+              const row = document.createElement("tr");
+              row.innerHTML = `<td>${msg.name}</td><td>${field.name}</td><td>${field.name}</td><td>${field.value}</td>`;
+              diagTable.appendChild(row);
+            }
           }
         }
 
@@ -117,8 +119,3 @@
   </script>
 </body>
 </html>
-
-
-
-
-
