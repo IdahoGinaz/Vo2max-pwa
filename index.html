@@ -96,7 +96,7 @@
 
     async function parseFitArrayBuffer(arrayBuffer, sourceLabel) {
       return new Promise((resolve) => {
-        const fitParser = new FitParser.FitParser({ force: true });
+       const fitParser = new FitParser.FitParser({ force: true });
         fitParser.parse(arrayBuffer, function (error, data) {
           if (error) return resolve({ error });
 
@@ -172,4 +172,5 @@
 </body>
 
 </html>
+
 
