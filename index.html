@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>VO2 Max Extractor (PWA)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+  <meta name="theme-color" content="#2c3e50">
+  <link rel="manifest" href="/static/manifest.json">
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 16px; }
+    header { display: flex; align-items: center; gap: 12px; }
+    h1 { font-size: 1.25rem; margin: 0; }
+    .card { border: 1px solid #ddd; border-radius: 8px; padding: 16px; margin-top: 12px; }
+    label { display: block; margin-bottom: 8px; font-weight: 600; }
+    input[type="file"] { width: 100%; }
+    button { margin-top: 12px; padding: 10px 14px; border: 0; border-radius: 6px; background: #2c3e50; color: #fff; font-weight: 600; }
+    .result { margin-top: 16px; font-size: 1.1rem; }
+    table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 0.9rem; }
+    th, td { border: 1px solid #eee; padding: 6px; text-align: left; }
+    .muted { color: #666; font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+  <header>
+    <img src="/static/icon-192.png" alt="" width="32" height="32">
+    <h1>VO2 Max Extractor</h1>
+  </header>
+
+  <div class="card">
+    <label for="fitfile">Upload Garmin .fit or .zip</label>
+    <input type="file" id="fitfile" accept=".fit,.zip">
+    <button id="processBtn">Process file</button>
+    <div class="result" id="result"></div>
+    <p class="muted">This runs entirely on your device. For best PWA features on iPhone, access via HTTPS and Add to Home Screen.</p>
+  </div>
+
+  <div class="card" id="diagnosticsCard" style="display:none;">
+    <h2 style="font-size:1rem; margin-top:0;">Diagnostics</h2>
+    <div id="diagInfo" class="muted"></div>
+    <table id="diagTable">
+      <thead>
+        <tr><th>msg_name</th><th>field_name</th><th>key</th><th>value</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <!-- FIT parser and ZIP library via CDN -->
+  <script src="https://unpkg.com/fit-file-parser/dist/fit-file-parser.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+
+  <script>
+    const fileInput = document.getElementById("fitfile");
+    const processBtn = document.getElementById("processBtn");
+    const resultEl = document.getElementById("result");
+    const diagnosticsCard = document.getElementById("diagnosticsCard");
+    const diagInfoEl = document.getElementById("diagInfo");
+    const diagTableBody = document.querySelector("#diagTable tbody");
+
+    function scaleVo2(raw) {
+      // Garmin fixed-point scaling used in forum notes
+      return raw * 3.5 / 65536.0;
+    }
+
+    async function readFirstFitFromZip(file) {
+      const zip = await JSZip.loadAsync(file);
+      for (const filename of Object.keys(zip.files)) {
+        if (filename.toLowerCase().endsWith(".fit")) {
+          const ab = await zip.files[filename].async("arraybuffer");
+          return { arrayBuffer: ab, source: filename };
+        }
+      }
+      return { arrayBuffer: null, source: null, error: "No .fit file found inside zip." };
+    }
+
+    function renderDiagnostics(messages, source, vo2maxDisplay) {
+      diagnosticsCard.style.display = "block";
+      diagInfoEl.textContent = `Source: ${source || "unknown"} | Messages: ${messages.length} | VO2 Max: ${vo2maxDisplay || "n/a"}`;
+      diagTableBody.innerHTML = "";
+
+      // Show up to 150 rows to keep the page responsive
+      let count = 0;
+      for (const msg of messages) {
+        const msgName = msg.name || "unknown";
+        // Show selected keys
+        for (const key of Object.keys(msg)) {
+          if (key === "name") continue;
+          const val = msg[key];
+          const tr = document.createElement("tr");
+          tr.innerHTML = `<td>${msgName}</td><td>${key.startsWith("unknown_") ? key : ""}</td><td>${key}</td><td>${Array.isArray(val) ? JSON.stringify(val) : String(val)}</td>`;
+          diagTableBody.appendChild(tr);
+          if (++count >= 150) return;
+        }
+      }
+    }
+
+    async function parseFitArrayBuffer(arrayBuffer, sourceLabel) {
+      return new Promise((resolve) => {
+        const fitParser = new FitParser({ force: true });
+        fitParser.parse(arrayBuffer, function (error, data) {
+          if (error) return resolve({ error });
+
+          let vo2maxRaw = null;
+          let vo2maxScaled = null;
+
+          // data.messages is an array of parsed message objects
+          for (const msg of data.messages || []) {
+            if (msg.name === "unknown_140") {
+              // Most parsers expose developer fields as object keys on the message
+              const raw = msg["unknown_7"];
+              if (raw != null && !isNaN(raw)) {
+                vo2maxRaw = Number(raw);
+                vo2maxScaled = scaleVo2(vo2maxRaw);
+                break;
+              }
+            }
+          }
+
+          const vo2Display = vo2maxScaled != null ? vo2maxScaled.toFixed(3) : null;
+
+          renderDiagnostics(data.messages || [], sourceLabel, vo2Display);
+          resolve({ vo2maxRaw, vo2maxScaled, messages: data.messages });
+        });
+      });
+    }
+
+    processBtn.addEventListener("click", async () => {
+      resultEl.textContent = "";
+      diagnosticsCard.style.display = "none";
+      diagTableBody.innerHTML = "";
+
+      const file = fileInput.files[0];
+      if (!file) {
+        resultEl.textContent = "Please select a .fit or .zip file.";
+        return;
+      }
+
+      try {
+        let arrayBuffer, source;
+        if (file.name.toLowerCase().endsWith(".zip")) {
+          const zipRes = await readFirstFitFromZip(file);
+          if (!zipRes.arrayBuffer) {
+            resultEl.textContent = zipRes.error || "Failed to read zip.";
+            return;
+          }
+          arrayBuffer = zipRes.arrayBuffer;
+          source = `${file.name} → ${zipRes.source}`;
+        } else {
+          arrayBuffer = await file.arrayBuffer();
+          source = file.name;
+        }
+
+        const { vo2maxRaw, vo2maxScaled } = await parseFitArrayBuffer(arrayBuffer, source);
+
+        if (vo2maxScaled != null) {
+          resultEl.textContent = `VO2 Max: ${vo2maxScaled.toFixed(3)} ml/kg/min (raw: ${vo2maxRaw})`;
+        } else {
+          resultEl.textContent = "No VO2 Max found (searched unknown_140 → unknown_7). Check diagnostics below.";
+        }
+      } catch (e) {
+        resultEl.textContent = "Error: " + (e?.message || String(e));
+      }
+    });
+
+    // Register service worker for offline caching (requires HTTPS or localhost)
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/static/service-worker.js").catch(() => {
+        // Silent failure if not on HTTPS
+      });
+    }
+  </script>
+</body>
+</html>
