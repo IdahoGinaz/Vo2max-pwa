@@ -2,28 +2,119 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>FIT Parser Test</title>
+  <title>VO2 Max Extractor (PWA)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#2c3e50">
+  <link rel="manifest" href="static/manifest.json">
+  <link rel="icon" href="static/icon-192.png">
   <style>
-    body { font-family: sans-serif; margin: 2rem; }
-    .ok { color: green; font-weight: bold; }
-    .error { color: red; font-weight: bold; }
+    body { font-family: sans-serif; margin: 1rem; }
+    h1 { font-size: 1.5rem; }
+    .card { border: 1px solid #ccc; border-radius: 8px; padding: 1rem; margin-top: 1rem; }
+    input[type="file"] { width: 100%; margin-top: 0.5rem; }
+    button { margin-top: 1rem; padding: 0.5rem 1rem; background: #2c3e50; color: white; border: none; border-radius: 4px; }
+    .result { margin-top: 1rem; font-weight: bold; }
+    table { width: 100%; border-collapse: collapse; margin-top: 1rem; font-size: 0.9rem; }
+    th, td { border: 1px solid #ddd; padding: 6px; text-align: left; }
   </style>
 </head>
 <body>
-  <h1>Testing FIT Parser Load</h1>
-  <p id="status">Checking...</p>
+  <h1>VO2 Max Extractor</h1>
+  <div class="card">
+    <label for="fitfile">Upload a .fit or .zip file:</label>
+    <input type="file" id="fitfile" accept=".fit,.zip">
+    <button id="processBtn">Extract VO2 Max</button>
+    <div class="result" id="result"></div>
+  </div>
 
-  <!-- Local copy of FIT parser -->
+  <div class="card" id="diagnosticsCard" style="display:none;">
+    <h2>Diagnostics</h2>
+    <table>
+      <thead>
+        <tr><th>msg_name</th><th>field_name</th><th>key</th><th>value</th></tr>
+      </thead>
+      <tbody id="diagTable"></tbody>
+    </table>
+  </div>
+
+  <!-- Local copy of FIT parser and ZIP support -->
   <script src="static/fit-parser.js"></script>
-  <script>
-    const statusEl = document.getElementById("status");
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 
-    if (typeof window.FitParser === "function") {
-      statusEl.textContent = "✅ FIT Parser loaded correctly!";
-      statusEl.className = "ok";
-    } else {
-      statusEl.textContent = "❌ FIT Parser not found. Check /static/fit-parser.js path or file.";
-      statusEl.className = "error";
+  <script>
+    const fileInput = document.getElementById("fitfile");
+    const resultEl = document.getElementById("result");
+    const diagTable = document.getElementById("diagTable");
+    const diagnosticsCard = document.getElementById("diagnosticsCard");
+
+    function scaleVo2(raw) {
+      return raw * 3.5 / 65536;
+    }
+
+    async function readFirstFitFromZip(file) {
+      const zip = await JSZip.loadAsync(file);
+      for (const name of Object.keys(zip.files)) {
+        if (name.toLowerCase().endsWith(".fit")) {
+          const ab = await zip.files[name].async("arraybuffer");
+          return ab;
+        }
+      }
+      throw new Error("No .fit file found in zip");
+    }
+
+    async function parseFit(arrayBuffer) {
+      return new Promise((resolve, reject) => {
+        const parser = new window.FitParser({ force: true });
+        parser.parse(arrayBuffer, (err, data) => {
+          if (err) return reject(err);
+          resolve(data);
+        });
+      });
+    }
+
+    document.getElementById("processBtn").addEventListener("click", async () => {
+      resultEl.textContent = "";
+      diagTable.innerHTML = "";
+      diagnosticsCard.style.display = "none";
+
+      const file = fileInput.files[0];
+      if (!file) return (resultEl.textContent = "Please select a file.");
+
+      try {
+        let arrayBuffer;
+        if (file.name.endsWith(".zip")) {
+          arrayBuffer = await readFirstFitFromZip(file);
+        } else {
+          arrayBuffer = await file.arrayBuffer();
+        }
+
+        const data = await parseFit(arrayBuffer);
+        let vo2 = null;
+
+        for (const msg of data.messages || []) {
+          if (msg.name === "unknown_140" && msg["unknown_7"] != null) {
+            vo2 = scaleVo2(msg["unknown_7"]);
+          }
+
+          for (const key in msg) {
+            if (key === "name") continue;
+            const row = document.createElement("tr");
+            row.innerHTML = `<td>${msg.name}</td><td>${key.startsWith("unknown_") ? key : ""}</td><td>${key}</td><td>${msg[key]}</td>`;
+            diagTable.appendChild(row);
+          }
+        }
+
+        diagnosticsCard.style.display = "block";
+        resultEl.textContent = vo2
+          ? `VO2 Max: ${vo2.toFixed(3)} ml/kg/min`
+          : "VO2 Max not found (check diagnostics).";
+      } catch (e) {
+        resultEl.textContent = "Error: " + e.message;
+      }
+    });
+
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("static/service-worker.js");
     }
   </script>
 </body>
