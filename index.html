@@ -37,11 +37,15 @@
     </table>
   </div>
 
-  <!-- Local copy of FIT parser and ZIP support -->
-<script src="static/fit-parser.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <!-- JSZip still loads as a normal script -->
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 
-  <script>
+  <!-- Import fit-parser as an ES module and attach to window -->
+  <script type="module">
+    import * as FitParserModule from './static/fit-parser.js';
+    const FitParser = FitParserModule.default || FitParserModule.FitParser;
+    window.FitParser = FitParser;
+
     const fileInput = document.getElementById("fitfile");
     const resultEl = document.getElementById("result");
     const diagTable = document.getElementById("diagTable");
