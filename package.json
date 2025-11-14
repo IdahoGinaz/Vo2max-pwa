@@ -1,0 +1,14 @@
+{
+  "name": "vo2-fit-pwa-build",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "rollup -c"
+  },
+  "devDependencies": {
+    "fit-file-parser": "1.5.0",
+    "rollup": "^3.0.0",
+    "@rollup/plugin-node-resolve": "^15.0.0",
+    "@rollup/plugin-commonjs": "^24.0.0"
+  }
+}
