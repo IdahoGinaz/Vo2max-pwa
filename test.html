@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>FIT Parser Test</title>
+</head>
+<body>
+  <h1>Testing FIT Parser Load</h1>
+  <p>Open your browser console to see the result.</p>
+
+  <!-- Local copy of FIT parser -->
+  <script src="/static/fit-parser.js"></script>
+
+  <script>
+    console.log("typeof window.FitParser:", typeof window.FitParser);
+
+    if (typeof window.FitParser === "function") {
+      console.log("✅ FIT Parser loaded correctly!");
+    } else {
+      console.error("❌ FIT Parser not found. Check /static/fit-parser.js path or file.");
+    }
+  </script>
+</body>
+</html>
