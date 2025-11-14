@@ -65,6 +65,7 @@
     async function parseFit(arrayBuffer) {
       return new Promise((resolve, reject) => {
         const parser = new window.FitParser({ force: true });
+
         parser.parse(arrayBuffer, (err, data) => {
           if (err) return reject(err);
           resolve(data);
