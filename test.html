@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>FIT Parser Test</title>
+  <title>FIT Parser Test (ESM)</title>
   <style>
     body { font-family: sans-serif; margin: 2rem; }
     .ok { color: green; font-weight: bold; }
@@ -10,21 +10,33 @@
   </style>
 </head>
 <body>
-  <h1>Testing FIT Parser Load</h1>
+  <h1>Testing FIT Parser Load (ES Module)</h1>
   <p id="status">Checking...</p>
 
-  <!-- Local copy of FIT parser -->
-  <script src="static/fit-parser.js"></script>
-
-  <script>
+  <script type="module">
     const statusEl = document.getElementById("status");
 
-    if (typeof window.FitParser === "function") {
-      statusEl.textContent = "✅ FIT Parser loaded correctly!";
-      statusEl.className = "ok";
-    } else {
-      statusEl.textContent = "❌ FIT Parser not found. Check static/fit-parser.js path or file.";
-      statusEl.className = "error";
+    try {
+      // Import the parser as an ES module from your static folder
+      const module = await import('./static/fit-parser.js');
+
+      // Common patterns:
+      // - export default FitParser
+      // - export { FitParser }
+      const FitParser = module.default || module.FitParser;
+
+      if (typeof FitParser === 'function') {
+        // Expose it globally for your existing code paths
+        window.FitParser = FitParser;
+        statusEl.textContent = '✅ FIT Parser loaded correctly as ES module!';
+        statusEl.className = 'ok';
+      } else {
+        statusEl.textContent = '❌ Module loaded, but FitParser was not found in its exports.';
+        statusEl.className = 'error';
+      }
+    } catch (e) {
+      statusEl.textContent = '❌ Failed to import ./static/fit-parser.js: ' + e.message;
+      statusEl.className = 'error';
     }
   </script>
 </body>
