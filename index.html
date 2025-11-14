@@ -5,8 +5,8 @@
   <title>VO2 Max Extractor (PWA)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#2c3e50">
-  <link rel="manifest" href="/static/manifest.json">
-  <link rel="icon" href="/static/icon-192.png">
+  <link rel="manifest" href="static/manifest.json">
+  <link rel="icon" href="static/icon-192.png">
   <style>
     body { font-family: sans-serif; margin: 1rem; }
     h1 { font-size: 1.5rem; }
@@ -37,9 +37,9 @@
     </table>
   </div>
 
-  <!-- Browser-compatible FIT parser and ZIP support -->
-<script src="static/fit-parser.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <!-- Local copy of FIT parser and ZIP support -->
+  <script src="static/fit-parser.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 
   <script>
     const fileInput = document.getElementById("fitfile");
@@ -65,7 +65,6 @@
     async function parseFit(arrayBuffer) {
       return new Promise((resolve, reject) => {
         const parser = new window.FitParser({ force: true });
-
         parser.parse(arrayBuffer, (err, data) => {
           if (err) return reject(err);
           resolve(data);
@@ -115,7 +114,7 @@
     });
 
     if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("/static/service-worker.js");
+      navigator.serviceWorker.register("static/service-worker.js");
     }
   </script>
 </body>
