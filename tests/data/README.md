@@ -1,1 +1,0 @@
-Place sample .fit files here for tests
