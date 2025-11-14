@@ -3,21 +3,28 @@
 <head>
   <meta charset="utf-8">
   <title>FIT Parser Test</title>
+  <style>
+    body { font-family: sans-serif; margin: 2rem; }
+    .ok { color: green; font-weight: bold; }
+    .error { color: red; font-weight: bold; }
+  </style>
 </head>
 <body>
   <h1>Testing FIT Parser Load</h1>
-  <p>Open your browser console to see the result.</p>
+  <p id="status">Checking...</p>
 
   <!-- Local copy of FIT parser -->
   <script src="/static/fit-parser.js"></script>
 
   <script>
-    console.log("typeof window.FitParser:", typeof window.FitParser);
+    const statusEl = document.getElementById("status");
 
     if (typeof window.FitParser === "function") {
-      console.log("✅ FIT Parser loaded correctly!");
+      statusEl.textContent = "✅ FIT Parser loaded correctly!";
+      statusEl.className = "ok";
     } else {
-      console.error("❌ FIT Parser not found. Check /static/fit-parser.js path or file.");
+      statusEl.textContent = "❌ FIT Parser not found. Check /static/fit-parser.js path or file.";
+      statusEl.className = "error";
     }
   </script>
 </body>
